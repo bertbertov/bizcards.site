@@ -13,10 +13,13 @@
 <meta property="og:url" content="https://bizcards.site/dvestrategy/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<div class="grain" aria-hidden="true"></div>
+<div class="glow-cursor" aria-hidden="true"></div>
 
 <header class="nav">
   <a class="brand" href="#top" aria-label="DVE Strategy home"><span class="brand-mark">DVE</span><span class="brand-word">Strategy</span></a>
@@ -44,56 +47,67 @@
 
 <main id="top">
 
-  <!-- Hero + offer -->
+  <!-- HERO -->
   <section class="hero" id="home">
-    <div class="market" aria-hidden="true">
-      <span class="market-grid"></span>
-      <span class="market-glow"></span>
-      <span class="market-line"></span>
-      <span class="candles">
-        <b style="--h:46px" class="up"></b><b style="--h:78px"></b><b style="--h:64px" class="up"></b><b style="--h:106px"></b><b style="--h:132px" class="up"></b><b style="--h:166px"></b><b style="--h:158px" class="up"></b><b style="--h:204px"></b><b style="--h:242px" class="up"></b><b style="--h:276px"></b><b style="--h:256px" class="up"></b><b style="--h:296px"></b>
-      </span>
-      <span class="volbars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <canvas class="hero-chart" id="chart" aria-hidden="true"></canvas>
+    <div class="hero-aura" data-speed="0.15" aria-hidden="true"></div>
+    <div class="hero-floor" aria-hidden="true"></div>
+
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow line-in" style="--d:.05s">Trading Mentorship<span class="tick"></span></p>
+        <h1>
+          <span class="line-in" style="--d:.15s">The Volume-Based</span>
+          <span class="line-in" style="--d:.28s"><em>Trading Playbook.</em></span>
+        </h1>
+        <p class="intro line-in" style="--d:.42s">Go beyond basic price action. Learn how I use Volume + Volume Profile to identify market direction</p>
+        <div class="actions line-in" style="--d:.55s">
+          <a class="btn btn-solid btn-large" href="https://dvestrategy.com/register"><i data-lucide="chart-no-axes-combined"></i>Enroll Now</a>
+          <a class="btn btn-ghost btn-large" href="#mentorship"><i data-lucide="circle-play"></i>Learn More</a>
+        </div>
+        <div class="trust line-in" style="--d:.68s">
+          <div><i data-lucide="shield-check"></i><p><strong>Proven Strategy</strong><small>Real Market Results</small></p></div>
+          <div><i data-lucide="users-round"></i><p><strong>Student Focused</strong><small>Mentorship &amp; Support</small></p></div>
+          <div><i data-lucide="lock-keyhole"></i><p><strong>Lifetime Access</strong><small>Learn at Your Pace</small></p></div>
+          <div><i data-lucide="chart-no-axes-combined"></i><p><strong>Real Market</strong><small>Live Analysis</small></p></div>
+        </div>
+      </div>
+
+      <aside class="offer line-in" style="--d:.5s" id="mentorship">
+        <div class="offer-frame" aria-hidden="true"></div>
+        <h2>DVE Strategy + Volume Profile</h2>
+        <p class="offer-sub"><span class="tick"></span>Mentorship by Simply Branny<span class="tick"></span></p>
+        <p class="offer-desc">Discover how I combine Volume Profile, market direction, and volume-based confirmation to find quality opportunities. Don&rsquo;t just watch the market. Learn how to read it</p>
+        <p class="price"><i data-lucide="tag"></i>Lifetime Access &mdash; $299</p>
+        <ul class="benefits">
+          <li><i data-lucide="circle-check"></i>Complete DVE Strategy</li>
+          <li><i data-lucide="circle-check"></i>Volume Profile Mentorship</li>
+          <li><i data-lucide="circle-check"></i>Learn My Entry &amp; Exit Process</li>
+          <li><i data-lucide="circle-check"></i>Live Trading &amp; Market Analysis</li>
+          <li><i data-lucide="circle-check"></i>Trade Management &amp; Risk Management</li>
+          <li><i data-lucide="circle-check"></i>Video Trade Breakdowns</li>
+          <li><i data-lucide="circle-check"></i>Copy My Trades &amp; Follow My Entries</li>
+          <li><i data-lucide="circle-check"></i>Learn How I Manage Trades From Entry to Exit</li>
+          <li><i data-lucide="circle-check"></i>Lifetime Access to the Mentorship</li>
+        </ul>
+      </aside>
     </div>
 
-    <div class="hero-copy reveal">
-      <p class="eyebrow">Trading Mentorship<span class="tick"></span></p>
-      <h1>The Volume-Based<br><em>Trading Playbook.</em></h1>
-      <p class="intro">Go beyond basic price action. Learn how I use Volume + Volume Profile to identify market direction</p>
-      <div class="actions">
-        <a class="btn btn-solid btn-large" href="https://dvestrategy.com/register"><i data-lucide="chart-no-axes-combined"></i>Enroll Now</a>
-        <a class="btn btn-ghost btn-large" href="#mentorship"><i data-lucide="circle-play"></i>Learn More</a>
-      </div>
-      <div class="trust">
-        <div><i data-lucide="shield-check"></i><p><strong>Proven Strategy</strong><small>Real Market Results</small></p></div>
-        <div><i data-lucide="users-round"></i><p><strong>Student Focused</strong><small>Mentorship &amp; Support</small></p></div>
-        <div><i data-lucide="lock-keyhole"></i><p><strong>Lifetime Access</strong><small>Learn at Your Pace</small></p></div>
-        <div><i data-lucide="chart-no-axes-combined"></i><p><strong>Real Market</strong><small>Live Analysis</small></p></div>
-      </div>
-    </div>
-
-    <aside class="offer reveal" id="mentorship">
-      <h2>DVE Strategy + Volume Profile</h2>
-      <p class="offer-sub"><span class="tick"></span>Mentorship by Simply Branny<span class="tick"></span></p>
-      <p class="offer-desc">Discover how I combine Volume Profile, market direction, and volume-based confirmation to find quality opportunities. Don&rsquo;t just watch the market. Learn how to read it</p>
-      <p class="price"><i data-lucide="tag"></i>Lifetime Access &mdash; $299</p>
-      <ul class="benefits">
-        <li><i data-lucide="circle-check"></i>Complete DVE Strategy</li>
-        <li><i data-lucide="circle-check"></i>Volume Profile Mentorship</li>
-        <li><i data-lucide="circle-check"></i>Learn My Entry &amp; Exit Process</li>
-        <li><i data-lucide="circle-check"></i>Live Trading &amp; Market Analysis</li>
-        <li><i data-lucide="circle-check"></i>Trade Management &amp; Risk Management</li>
-        <li><i data-lucide="circle-check"></i>Video Trade Breakdowns</li>
-        <li><i data-lucide="circle-check"></i>Copy My Trades &amp; Follow My Entries</li>
-        <li><i data-lucide="circle-check"></i>Learn How I Manage Trades From Entry to Exit</li>
-        <li><i data-lucide="circle-check"></i>Lifetime Access to the Mentorship</li>
-      </ul>
-    </aside>
+    <div class="scroll-cue" aria-hidden="true"><span></span></div>
   </section>
 
-  <!-- Curriculum -->
+  <!-- MARQUEE -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>Volume Profile<i>·</i>Market Structure<i>·</i>Entry &amp; Exit Process<i>·</i>Risk Management<i>·</i>Live Analysis<i>·</i>Trade Breakdowns<i>·</i>Lifetime Access<i>·</i></span>
+      <span>Volume Profile<i>·</i>Market Structure<i>·</i>Entry &amp; Exit Process<i>·</i>Risk Management<i>·</i>Live Analysis<i>·</i>Trade Breakdowns<i>·</i>Lifetime Access<i>·</i></span>
+    </div>
+  </div>
+
+  <!-- CURRICULUM -->
   <section class="strip" id="curriculum">
     <p class="section-index reveal">01 · Course Content</p>
+    <h2 class="section-title reveal">What the playbook <em>actually teaches.</em></h2>
     <div class="grid4 reveal">
       <article><i data-lucide="target"></i><h3>Proven Approach</h3><p>A tested strategy built on market structure, volume, and probability.</p></article>
       <article><i data-lucide="chart-no-axes-column-increasing"></i><h3>Real Market Analysis</h3><p>Daily live market analysis to help you understand the markets better.</p></article>
@@ -102,8 +116,9 @@
     </div>
   </section>
 
-  <!-- About -->
+  <!-- ABOUT -->
   <section class="story" id="about">
+    <div class="story-aura" data-speed="0.1" aria-hidden="true"></div>
     <p class="section-index reveal">02 · About</p>
     <div class="story-inner reveal">
       <div>
@@ -118,7 +133,7 @@
   <!-- FAQ -->
   <section class="faq" id="faq">
     <p class="section-index reveal">03 · FAQ</p>
-    <h2 class="reveal">Questions, <em>answered.</em></h2>
+    <h2 class="section-title reveal">Questions, <em>answered.</em></h2>
     <div class="faq-list reveal">
       <details>
         <summary>What is the DVE Strategy?<i data-lucide="plus"></i></summary>
@@ -143,8 +158,9 @@
     </div>
   </section>
 
-  <!-- Final CTA -->
+  <!-- FINAL CTA -->
   <section class="final reveal">
+    <div class="final-aura" aria-hidden="true"></div>
     <p class="eyebrow">Lifetime Access · $299<span class="tick"></span></p>
     <h2>Don&rsquo;t just watch the market.<br><em>Learn how to read it.</em></h2>
     <a class="btn btn-solid btn-large" href="https://dvestrategy.com/register"><i data-lucide="chart-no-axes-combined"></i>Enroll Now</a>
@@ -158,31 +174,6 @@
 </footer>
 
 <script src="https://unpkg.com/lucide@latest"></script>
-<script>
-lucide.createIcons();
-
-// Mobile drawer
-document.querySelectorAll('[data-menu-toggle]').forEach(function (el) {
-  el.addEventListener('click', function () {
-    var drawer = document.querySelector('[data-mobile-menu]');
-    var open = drawer.classList.toggle('open');
-    document.querySelector('.nav-burger').setAttribute('aria-expanded', open);
-  });
-});
-
-// One orchestrated entrance: staggered fade/rise, transform+opacity only
-var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-var items = document.querySelectorAll('.reveal');
-if (reduce || !('IntersectionObserver' in window)) {
-  items.forEach(function (el) { el.classList.add('in'); });
-} else {
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-    });
-  }, { threshold: 0.12 });
-  items.forEach(function (el, i) { el.style.transitionDelay = Math.min(i * 60, 240) + 'ms'; io.observe(el); });
-}
-</script>
+<script src="app.js"></script>
 </body>
 </html>
