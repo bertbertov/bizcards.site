@@ -1,5 +1,5 @@
-/* DVE Strategy — showpiece interactions.
-   Motion budget: transform + opacity only, entrances < 700ms. */
+/* DVE Strategy — showpiece interactions v3.
+   Motion budget: transform + opacity only, entrances < 800ms. */
 
 lucide.createIcons();
 
@@ -15,6 +15,14 @@ document.querySelectorAll('[data-menu-toggle]').forEach(function (el) {
 var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var finePointer = window.matchMedia('(pointer: fine)').matches;
 
+/* ---------- Line-in cleanup (frees transform for tilt/magnetic) ---------- */
+document.querySelectorAll('.line-in').forEach(function (el) {
+  el.addEventListener('animationend', function () {
+    el.classList.remove('line-in');
+    el.style.opacity = '1';
+  });
+});
+
 /* ---------- Scroll reveals ---------- */
 var items = document.querySelectorAll('.reveal');
 if (reduceMotion || !('IntersectionObserver' in window)) {
@@ -27,6 +35,17 @@ if (reduceMotion || !('IntersectionObserver' in window)) {
   }, { threshold: 0.12 });
   items.forEach(function (el) { io.observe(el); });
 }
+
+/* ---------- Nav: hide on scroll down, show on scroll up ---------- */
+(function () {
+  var nav = document.querySelector('.nav');
+  var lastY = 0;
+  window.addEventListener('scroll', function () {
+    var y = window.scrollY;
+    nav.classList.toggle('nav--hidden', y > 160 && y > lastY);
+    lastY = y;
+  }, { passive: true });
+})();
 
 /* ---------- Parallax auras (transform only) ---------- */
 var layers = document.querySelectorAll('[data-speed]');
@@ -61,10 +80,80 @@ if (!reduceMotion && finePointer && glow) {
   })();
 }
 
+/* ---------- Dot + ring cursor (desktop only) ---------- */
+if (!reduceMotion && finePointer) {
+  var dot = document.querySelector('.cursor-dot');
+  var ring = document.querySelector('.cursor-ring');
+  if (dot && ring) {
+    var mx = -100, my = -100, rx = -100, ry = -100;
+    var scale = 1, targetScale = 1, cursorOn = false;
+    window.addEventListener('pointermove', function (e) {
+      mx = e.clientX; my = e.clientY;
+      if (!cursorOn) { dot.style.opacity = '1'; ring.style.opacity = '1'; cursorOn = true; }
+    }, { passive: true });
+    document.addEventListener('pointerover', function (e) {
+      targetScale = e.target.closest('a, button, summary, [data-spotlight]') ? 1.8 : 1;
+    });
+    (function follow() {
+      rx += (mx - rx) * 0.16;
+      ry += (my - ry) * 0.16;
+      scale += (targetScale - scale) * 0.18;
+      dot.style.transform = 'translate(' + mx + 'px,' + my + 'px)';
+      ring.style.transform = 'translate(' + rx + 'px,' + ry + 'px) scale(' + scale.toFixed(3) + ')';
+      requestAnimationFrame(follow);
+    })();
+  }
+}
+
+/* ---------- Cursor-tracked spotlight on cards ---------- */
+if (finePointer) {
+  document.querySelectorAll('[data-spotlight]').forEach(function (el) {
+    el.addEventListener('pointermove', function (e) {
+      var r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }, { passive: true });
+  });
+}
+
+/* ---------- Magnetic buttons ---------- */
+if (!reduceMotion && finePointer) {
+  document.querySelectorAll('[data-magnetic]').forEach(function (btn) {
+    btn.addEventListener('pointermove', function (e) {
+      var r = btn.getBoundingClientRect();
+      var x = e.clientX - r.left - r.width / 2;
+      var y = e.clientY - r.top - r.height / 2;
+      btn.style.transform = 'translate(' + (x * 0.16).toFixed(1) + 'px,' + (y * 0.3).toFixed(1) + 'px)';
+    });
+    btn.addEventListener('pointerleave', function () { btn.style.transform = ''; });
+  });
+}
+
+/* ---------- Desk 3D tilt ---------- */
+if (!reduceMotion && finePointer) {
+  var desk = document.querySelector('[data-tilt]');
+  if (desk) {
+    var qx = 0, qy = 0, tx = 0, ty = 0;
+    desk.addEventListener('pointermove', function (e) {
+      var r = desk.getBoundingClientRect();
+      qx = ((e.clientY - r.top) / r.height - 0.5) * -3.2;
+      qy = ((e.clientX - r.left) / r.width - 0.5) * 3.6;
+    });
+    desk.addEventListener('pointerleave', function () { qx = 0; qy = 0; });
+    (function tilt() {
+      tx += (qx - tx) * 0.08;
+      ty += (qy - ty) * 0.08;
+      desk.style.transform = 'rotateX(' + tx.toFixed(3) + 'deg) rotateY(' + ty.toFixed(3) + 'deg)';
+      requestAnimationFrame(tilt);
+    })();
+  }
+}
+
 /* ---------- Signature element: living volume chart ----------
    A slow random-walk candlestick series with volume bars, drawn
-   in gold/ivory on the warm ground. New candles form on the right,
-   the series drifts left, the latest candle breathes. */
+   in gold/ivory inside the desk panel. New candles form on the right,
+   the series drifts left, the latest candle breathes. The panel HUD
+   (price readout, volume) updates on every committed candle. */
 (function () {
   var canvas = document.getElementById('chart');
   if (!canvas) return;
@@ -92,8 +181,8 @@ if (!reduceMotion && finePointer && glow) {
     W = canvas.clientWidth; H = canvas.clientHeight;
     canvas.width = W * DPR; canvas.height = H * DPR;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    perView = Math.max(28, Math.floor(W / 34));
-    candleW = Math.min(14, (W / perView) * 0.5);
+    perView = Math.max(24, Math.floor(W / 30));
+    candleW = Math.min(13, (W / perView) * 0.5);
     gap = W / perView;
     while (candles.length < perView + 4) candles.push(nextCandle());
     if (reduceMotion) draw();
@@ -108,33 +197,31 @@ if (!reduceMotion && finePointer && glow) {
     return { min: min, max: max, span: Math.max(max - min, 1) };
   }
 
-  function draw(progress) {
+  function draw() {
     ctx.clearRect(0, 0, W, H);
     var b = bounds();
-    var chartH = H * 0.62, topPad = H * 0.1;
+    var chartH = H * 0.6, topPad = H * 0.08;
     var y = function (p) { return topPad + (1 - (p - b.min) / b.span) * chartH; };
-    var volBase = H * 0.94, volMaxH = H * 0.13;
+    var volBase = H * 0.96, volMaxH = H * 0.16;
 
     // horizontal hairlines
-    ctx.strokeStyle = 'rgba(227,179,76,0.06)';
+    ctx.strokeStyle = 'rgba(227,179,76,0.07)';
     ctx.lineWidth = 1;
     for (var g = 0; g <= 4; g++) {
       var gy = topPad + (chartH / 4) * g;
       ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
     }
 
-    var offset = (1 - (progress == null ? 1 : progress)) * gap;
-
     for (var i = 0; i < candles.length; i++) {
       var c = candles[i];
-      var x = W - (candles.length - i) * gap + gap * 0.5 - offset;
+      var x = W - (candles.length - i) * gap + gap * 0.5;
       if (x < -gap || x > W + gap) continue;
       var up = c.close >= c.open;
       var col = up ? GOLD : IVORY;
       var alpha = up ? 0.9 : 0.55;
 
       // volume bar
-      ctx.fillStyle = up ? 'rgba(227,179,76,0.28)' : 'rgba(245,238,220,0.14)';
+      ctx.fillStyle = up ? 'rgba(227,179,76,0.30)' : 'rgba(245,238,220,0.15)';
       var vh = c.vol * volMaxH;
       ctx.fillRect(x - candleW / 2, volBase - vh, candleW, vh);
 
