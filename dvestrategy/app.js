@@ -1,272 +1,117 @@
-/* DVE Strategy — showpiece interactions v3.
-   Motion budget: transform + opacity only, entrances < 800ms. */
-
-lucide.createIcons();
-
-/* ---------- Mobile drawer ---------- */
-document.querySelectorAll('[data-menu-toggle]').forEach(function (el) {
-  el.addEventListener('click', function () {
-    var drawer = document.querySelector('[data-mobile-menu]');
-    var open = drawer.classList.toggle('open');
-    document.querySelector('.nav-burger').setAttribute('aria-expanded', open);
-  });
-});
-
-var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-var finePointer = window.matchMedia('(pointer: fine)').matches;
-
-/* ---------- Line-in cleanup (frees transform for tilt/magnetic) ---------- */
-document.querySelectorAll('.line-in').forEach(function (el) {
-  el.addEventListener('animationend', function () {
-    el.classList.remove('line-in');
-    el.style.opacity = '1';
-  });
-});
-
-/* ---------- Scroll reveals ---------- */
-var items = document.querySelectorAll('.reveal');
-if (reduceMotion || !('IntersectionObserver' in window)) {
-  items.forEach(function (el) { el.classList.add('in'); });
-} else {
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) {
-      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-    });
-  }, { threshold: 0.12 });
-  items.forEach(function (el) { io.observe(el); });
-}
-
-/* ---------- Nav: hide on scroll down, show on scroll up ---------- */
+/* app.js — DVE Strategy (Tradestone-faithful build). Nav, provider cards, live chart, signup. */
 (function () {
-  var nav = document.querySelector('.nav');
-  var lastY = 0;
-  window.addEventListener('scroll', function () {
-    var y = window.scrollY;
-    nav.classList.toggle('nav--hidden', y > 160 && y > lastY);
-    lastY = y;
-  }, { passive: true });
-})();
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
-/* ---------- Parallax auras (transform only) ---------- */
-var layers = document.querySelectorAll('[data-speed]');
-if (!reduceMotion && layers.length) {
-  var ticking = false;
-  window.addEventListener('scroll', function () {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function () {
-      var y = window.scrollY;
-      layers.forEach(function (el) {
-        el.style.transform = 'translateY(' + (y * parseFloat(el.dataset.speed)) + 'px)';
+  document.addEventListener('DOMContentLoaded', function () {
+
+    /* header shadow on scroll (matches Tradestone: is-scrolled) */
+    var header = $('[data-tm-header]');
+    var onScroll = function () { if (header) header.classList.toggle('is-scrolled', window.scrollY > 8); };
+    onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
+
+    /* mobile nav — Tradestone opens the nav via body.tm-nav-open */
+    var toggle = $('[data-tm-nav-toggle]'), navEl = $('[data-tm-nav]');
+    function setNav(open) {
+      document.body.classList.toggle('tm-nav-open', open);
+      if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    if (toggle) toggle.addEventListener('click', function () { setNav(!document.body.classList.contains('tm-nav-open')); });
+    if (navEl) $$('a', navEl).forEach(function (a) { a.addEventListener('click', function () { setNav(false); }); });
+    /* close open dropdowns when clicking elsewhere; single-open accordion feel */
+    document.addEventListener('click', function (e) {
+      $$('.tm-nav-menu[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+
+    /* copy-trading provider cards (illustrative) */
+    var providers = [
+      { name: 'Kwame A.', tag: 'Gold · FX', risk: 'Medium', ret: '+38.2%' },
+      { name: 'Daniel O.', tag: 'Indices', risk: 'Low', ret: '+21.6%' },
+      { name: 'Marcus L.', tag: 'Gold · Crypto', risk: 'Medium', ret: '+44.9%' }
+    ];
+    var pl = $('#providersList');
+    if (pl) {
+      pl.innerHTML = providers.map(function (p) {
+        var initials = p.name.split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2);
+        return '<article class="dve-provider">' +
+          '<div class="dve-avatar">' + initials + '</div>' +
+          '<div><h3>' + p.name + '</h3><div class="tag"><span>' + p.tag + '</span><span>Risk ' + p.risk + '</span></div></div>' +
+          '<div class="dve-provider-stat"><b>' + p.ret + '</b><span>12-mo illustrative</span></div>' +
+          '</article>';
+      }).join('');
+    }
+
+    /* instrument tabs (XAU/USD live; others demo) */
+    var mkTabs = $$('.tm-mkt-tab');
+    mkTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        mkTabs.forEach(function (t) { t.classList.remove('is-active'); });
+        tab.classList.add('is-active');
+        if (tab.textContent.indexOf('XAU') === -1) flashNote('The live chart shows XAU/USD (gold). The full terminal covers 100+ markets.');
       });
-      ticking = false;
     });
-  }, { passive: true });
-}
 
-/* ---------- Mouse-follow glow (desktop only) ---------- */
-var glow = document.querySelector('.glow-cursor');
-if (!reduceMotion && finePointer && glow) {
-  var gx = -999, gy = -999, cx = -999, cy = -999, glowOn = false;
-  window.addEventListener('pointermove', function (e) {
-    gx = e.clientX; gy = e.clientY;
-    if (!glowOn) { glow.style.opacity = '1'; glowOn = true; }
-  }, { passive: true });
-  (function glide() {
-    cx += (gx - cx) * 0.08;
-    cy += (gy - cy) * 0.08;
-    glow.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
-    requestAnimationFrame(glide);
-  })();
-}
+    /* live gold chart */
+    var canvas = $('#goldChart'), chart = null;
+    if (canvas && window.MT5Chart) {
+      var bidEl = $('#chartBid'), chgEl = $('#chartChg');
+      chart = new MT5Chart(canvas, {
+        proxy: window.DVE_GOLD_PROXY || '/api/gold',
+        timeframe: 'M15',
+        onPrice: function (bid) {
+          if (bidEl) bidEl.textContent = fmt(bid);
+          var pc = chart.prevClose || 0;
+          if (pc > 0 && chgEl) {
+            var pct = (bid - pc) / pc * 100;
+            chgEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+            chgEl.className = 'tm-chart-chg ' + (pct >= 0 ? 'tm-up' : 'tm-down');
+          }
+        }
+      });
+      window.addEventListener('beforeunload', function () { chart.destroy(); });
+      $$('#tfRow .tm-tf').forEach(function (b) {
+        b.addEventListener('click', function () {
+          $$('#tfRow .tm-tf').forEach(function (x) { x.classList.remove('is-active'); });
+          b.classList.add('is-active');
+          chart.setTimeframe(b.getAttribute('data-tf'));
+        });
+      });
+    }
+    function fmt(p) {
+      if (p == null || isNaN(p)) return '';
+      var s = Math.abs(p).toFixed(2).split('.');
+      s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return (p < 0 ? '-' : '') + s[0] + '.' + s[1];
+    }
 
-/* ---------- Dot + ring cursor (desktop only) ---------- */
-if (!reduceMotion && finePointer) {
-  var dot = document.querySelector('.cursor-dot');
-  var ring = document.querySelector('.cursor-ring');
-  if (dot && ring) {
-    var mx = -100, my = -100, rx = -100, ry = -100;
-    var scale = 1, targetScale = 1, cursorOn = false;
-    window.addEventListener('pointermove', function (e) {
-      mx = e.clientX; my = e.clientY;
-      if (!cursorOn) { dot.style.opacity = '1'; ring.style.opacity = '1'; cursorOn = true; }
-    }, { passive: true });
-    document.addEventListener('pointerover', function (e) {
-      targetScale = e.target.closest('a, button, summary, [data-spotlight]') ? 1.8 : 1;
-    });
-    (function follow() {
-      rx += (mx - rx) * 0.16;
-      ry += (my - ry) * 0.16;
-      scale += (targetScale - scale) * 0.18;
-      dot.style.transform = 'translate(' + mx + 'px,' + my + 'px)';
-      ring.style.transform = 'translate(' + rx + 'px,' + ry + 'px) scale(' + scale.toFixed(3) + ')';
-      requestAnimationFrame(follow);
-    })();
-  }
-}
+    /* signup -> hand off to secure enrollment */
+    var form = $('#signupForm'), msg = $('#signupMsg');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name = $('#su-name').value.trim(), email = $('#su-email').value.trim(),
+            pass = $('#su-pass').value, country = $('#su-country').value.trim(), agree = $('#su-agree').checked;
+        if (!name || !email || !pass || !country) { setMsg('Please complete all required fields.', true); return; }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setMsg('Please enter a valid email address.', true); return; }
+        if (!agree) { setMsg('Please accept the terms to continue.', true); return; }
+        setMsg('Continuing to secure enrollment', false);
+        try { sessionStorage.setItem('dve.signup', JSON.stringify({ name: name, email: email, country: country })); } catch (er) {}
+        setTimeout(function () { window.location.href = 'https://dvestrategy.com/register'; }, 650);
+      });
+    }
+    function setMsg(t, isErr) { if (!msg) return; msg.textContent = t; msg.style.color = isErr ? '#EA3943' : 'var(--tm-primary)'; }
 
-/* ---------- Cursor-tracked spotlight on cards ---------- */
-if (finePointer) {
-  document.querySelectorAll('[data-spotlight]').forEach(function (el) {
-    el.addEventListener('pointermove', function (e) {
-      var r = el.getBoundingClientRect();
-      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
-    }, { passive: true });
+    /* transient note */
+    var noteEl = null, noteTimer = null;
+    function flashNote(text) {
+      if (!noteEl) {
+        noteEl = document.createElement('div');
+        noteEl.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:220;background:#05090C;border:1px solid rgba(148,163,184,.28);color:#F8FAFC;font-family:Inter,sans-serif;font-size:13px;padding:11px 16px;border-radius:8px;box-shadow:0 16px 40px rgba(0,0,0,.5);max-width:88vw;text-align:center;opacity:0;transition:opacity .25s';
+        document.body.appendChild(noteEl);
+      }
+      noteEl.textContent = text; noteEl.style.opacity = '1';
+      clearTimeout(noteTimer); noteTimer = setTimeout(function () { noteEl.style.opacity = '0'; }, 2600);
+    }
   });
-}
-
-/* ---------- Magnetic buttons ---------- */
-if (!reduceMotion && finePointer) {
-  document.querySelectorAll('[data-magnetic]').forEach(function (btn) {
-    btn.addEventListener('pointermove', function (e) {
-      var r = btn.getBoundingClientRect();
-      var x = e.clientX - r.left - r.width / 2;
-      var y = e.clientY - r.top - r.height / 2;
-      btn.style.transform = 'translate(' + (x * 0.16).toFixed(1) + 'px,' + (y * 0.3).toFixed(1) + 'px)';
-    });
-    btn.addEventListener('pointerleave', function () { btn.style.transform = ''; });
-  });
-}
-
-/* ---------- Desk 3D tilt ---------- */
-if (!reduceMotion && finePointer) {
-  var desk = document.querySelector('[data-tilt]');
-  if (desk) {
-    var qx = 0, qy = 0, tx = 0, ty = 0;
-    desk.addEventListener('pointermove', function (e) {
-      var r = desk.getBoundingClientRect();
-      qx = ((e.clientY - r.top) / r.height - 0.5) * -3.2;
-      qy = ((e.clientX - r.left) / r.width - 0.5) * 3.6;
-    });
-    desk.addEventListener('pointerleave', function () { qx = 0; qy = 0; });
-    (function tilt() {
-      tx += (qx - tx) * 0.08;
-      ty += (qy - ty) * 0.08;
-      desk.style.transform = 'rotateX(' + tx.toFixed(3) + 'deg) rotateY(' + ty.toFixed(3) + 'deg)';
-      requestAnimationFrame(tilt);
-    })();
-  }
-}
-
-/* ---------- Signature element: living volume chart ----------
-   A slow random-walk candlestick series with volume bars, drawn
-   in gold/ivory inside the desk panel. New candles form on the right,
-   the series drifts left, the latest candle breathes. The panel HUD
-   (price readout, volume) updates on every committed candle. */
-(function () {
-  var canvas = document.getElementById('chart');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var DPR = Math.min(window.devicePixelRatio || 1, 2);
-
-  var GOLD = '#E3B34C', IVORY = '#F5EEDC';
-  var candles = [];
-  var price = 100;
-
-  function nextCandle() {
-    var open = price;
-    var drift = (Math.random() - 0.44) * 3.2; // slight upward bias
-    var close = open + drift;
-    var high = Math.max(open, close) + Math.random() * 1.6;
-    var low = Math.min(open, close) - Math.random() * 1.6;
-    var vol = 0.25 + Math.random() * 0.75;
-    price = close;
-    return { open: open, close: close, high: high, low: low, vol: vol };
-  }
-
-  var W = 0, H = 0, candleW = 0, gap = 0, perView = 0;
-
-  function resize() {
-    W = canvas.clientWidth; H = canvas.clientHeight;
-    canvas.width = W * DPR; canvas.height = H * DPR;
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    perView = Math.max(24, Math.floor(W / 30));
-    candleW = Math.min(13, (W / perView) * 0.5);
-    gap = W / perView;
-    while (candles.length < perView + 4) candles.push(nextCandle());
-    if (reduceMotion) draw();
-  }
-
-  function bounds() {
-    var min = Infinity, max = -Infinity;
-    for (var i = 0; i < candles.length; i++) {
-      min = Math.min(min, candles[i].low);
-      max = Math.max(max, candles[i].high);
-    }
-    return { min: min, max: max, span: Math.max(max - min, 1) };
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    var b = bounds();
-    var chartH = H * 0.6, topPad = H * 0.08;
-    var y = function (p) { return topPad + (1 - (p - b.min) / b.span) * chartH; };
-    var volBase = H * 0.96, volMaxH = H * 0.16;
-
-    // horizontal hairlines
-    ctx.strokeStyle = 'rgba(227,179,76,0.07)';
-    ctx.lineWidth = 1;
-    for (var g = 0; g <= 4; g++) {
-      var gy = topPad + (chartH / 4) * g;
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
-    }
-
-    for (var i = 0; i < candles.length; i++) {
-      var c = candles[i];
-      var x = W - (candles.length - i) * gap + gap * 0.5;
-      if (x < -gap || x > W + gap) continue;
-      var up = c.close >= c.open;
-      var col = up ? GOLD : IVORY;
-      var alpha = up ? 0.9 : 0.55;
-
-      // volume bar
-      ctx.fillStyle = up ? 'rgba(227,179,76,0.30)' : 'rgba(245,238,220,0.15)';
-      var vh = c.vol * volMaxH;
-      ctx.fillRect(x - candleW / 2, volBase - vh, candleW, vh);
-
-      // wick
-      ctx.strokeStyle = col;
-      ctx.globalAlpha = alpha * 0.75;
-      ctx.beginPath(); ctx.moveTo(x, y(c.high)); ctx.lineTo(x, y(c.low)); ctx.stroke();
-
-      // body with soft glow on up candles
-      ctx.globalAlpha = alpha;
-      if (up) { ctx.shadowColor = 'rgba(227,179,76,0.5)'; ctx.shadowBlur = 12; }
-      var bodyTop = y(Math.max(c.open, c.close));
-      var bodyH = Math.max(2, Math.abs(y(c.open) - y(c.close)));
-      ctx.fillStyle = col;
-      ctx.fillRect(x - candleW / 2, bodyTop, candleW, bodyH);
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  // candle lifecycle: breathe current candle, then commit and shift
-  var life = 0, LIFE_MS = 1500, last = 0;
-
-  function tick(now) {
-    if (!last) last = now;
-    var dt = now - last; last = now;
-    life += dt;
-
-    // mutate the live candle so it feels alive
-    var live = candles[candles.length - 1];
-    var wobble = Math.sin(now / 380) * 0.35;
-    live.close = live.open + (live.close - live.open) * 0.985 + wobble * 0.05;
-    live.high = Math.max(live.high, live.close);
-    live.low = Math.min(live.low, live.close);
-
-    if (life >= LIFE_MS) {
-      life = 0;
-      candles.push(nextCandle());
-      if (candles.length > perView + 6) candles.shift();
-    }
-    draw();
-    requestAnimationFrame(tick);
-  }
-
-  resize();
-  window.addEventListener('resize', resize);
-  if (!reduceMotion) requestAnimationFrame(tick);
 })();
